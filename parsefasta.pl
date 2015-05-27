@@ -14,19 +14,20 @@ while(my $seq = $seqio->next_seq)
 {
 my $string = $seq->seq;
 my @candidates = ();
+my $candidateinfo;
 my @prunedcandidates;
 my $genename = $seq->desc; #correctly returns the gene information (not accession)
 my $geneid = $seq->display_id; #correctly returns the GI
 #The fasta records are now read one at a time and can now be acted on
 
-	#first we need to find siRNA candidate matches and load them into an array
+	#first we need to find siRNA candidate matches and load them into an array, remembering the position of the match
 	
-	if ($string =~ m/(AA.{19,23}TT)/g) 
+	while ($string =~ m/(AA.{19,23}TT)/g) 
 		{
-		@candidates = ($string =~ m/(AA.{19,23}TT)/g) ;
-#		print "$_\n" for @candidates; #debug line
+		push (@candidates, $1) ;
+		$candidateinfo->{$1}->{"start"} = $-[1];
+		$candidateinfo->{$1}->{"end"} = $+[1];	
 		}
-	else {print "no matches found"};
 	
 	#At this point we have identified any matching candidates, which now need to be pruned for stretches of 4 identical nucleotides or N bases.
 
