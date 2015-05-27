@@ -1,6 +1,6 @@
 #!/usr/bin/perl -s
 use warnings;
-use strict;
+#use strict;
 use Bio::SeqIO;
 
 #create log file 
@@ -9,7 +9,7 @@ print $log "siRNA designer run log".localtime()."\n";
 close $log;
 
 #Begin to parse the multifasta file using bioperl and act on each record indiviually
-my $seqio = Bio::SeqIO->new(-file => "sample2.fa", '-format' => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => "sample.fa", '-format' => 'Fasta');
 while(my $seq = $seqio->next_seq) 
 {
 my $string = $seq->seq;
@@ -49,13 +49,14 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		$count++;
 		print $fa "\n>$genename\_candidate_siRNA_\#$count\n$_";
 		system "blastn -db cho_mrna -word_size 16 -evalue 1000 -query temp.fa > temp.bln";
-		
+		my $candidatesequence = $_;
+
 		#Parse the blast output and retain any useful information	
 		#lazy use of system grep
 		system("grep -A 1 \">\" temp.bln > tmp.txt");
-		open(fi, "<tmp.txt");
+		open("fi", "<tmp.txt");
 		my @text = <fi>;
-		close fi;
+		close "fi";
 		my @titles = ();
 		for (my $i=0; $i < scalar(@text); $i++) 
 			{
@@ -89,11 +90,30 @@ my $geneid = $seq->display_id; #correctly returns the GI
                 	print $fa "\n$genename\_candidate_siRNA_\#$count has no off-target effects\n\n"
 			}
 		else {print $fa "\n$genename\_candidate_siRNA_\#$count has off-target effects in ".((scalar @uniqblasthits)-1)." genes\n\n"}
-
+		
+		#Now have a list of which genes have no off target effects. Now need to access GC content & thermodynamic stability
+		my $nuccount=0;
+		my $gccount=0;
+		if (scalar @uniqblasthits == 1)
+			{
+			#compute GC
+			while ($candidatesequence =~ m/(.)/g)
+				{
+				my $nuc = $1;
+				chomp $nuc;
+				$nuccount++;
+				if (($nuc eq "G") or ($nuc eq "C")) {$gccount++;}
+				}
+			$candidatesequence->{"$_"}->{"gc"} = ((100 / $nuccount) * $gccount);
+			}
+		#The candidate sequence is now read into a data structure with its gc content and offtargets (already filtered so all should be 0)
+		foreach my $keys (keys %$candidatesequence)
+			{
+#			print $candidatesequence->{$keys}->{"gc"}."\n"; #example syntax line
+			$candidatesequence->{$keys}->{"offtargets"}= ((scalar @uniqblasthits)-1);
+			}
 
 		#At this point we finish any analysis on the current gene and log any data before starting on the next
-
-
 #               print @uniqblasthits,"\n\n\n"; #debug line
 		system "cat runlog.txt temp.fa > runlogtemp.txt";
 		system "mv runlogtemp.txt runlog.txt";	
@@ -101,7 +121,7 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		}	
 		
 		#Remove any temporary files
-#		print scalar @titles, "\n"; #debug lin
+#		print scalar @titles, "\n"; #debug line
 		system("rm tmp.txt");
 		system("rm temp.fa");
 #		system("rm temp.bln");
