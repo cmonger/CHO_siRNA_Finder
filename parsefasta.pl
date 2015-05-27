@@ -84,7 +84,10 @@ close $log;
                 	{
                 	print "\n>$genename\_candidate_siRNA_\#$count has no off-target effects\n\n"
                 	}
-	
+
+#               print @uniqblasthits,"\n\n\n";
+		system "cat runlog.txt temp.fa > runlogtemp.txt";
+		system "mv runlogtemp.txt runlog.txt";	
 
 		}	
 #		print scalar @titles, "\n";
