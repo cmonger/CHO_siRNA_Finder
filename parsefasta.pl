@@ -3,16 +3,20 @@ use warnings;
 use strict;
 use Bio::SeqIO;
 
-my $seqio = Bio::SeqIO->new(-file => "sample.fa", '-format' => 'Fasta');
+#create log file 
+open (my $log, '>', 'runlog.txt');
+print $log "siRNA designer run log".localtime()."\n";
+close $log;
+
+#Begin to parse the multifasta file using bioperl and act on each record indiviually
+my $seqio = Bio::SeqIO->new(-file => "sample2.fa", '-format' => 'Fasta');
 while(my $seq = $seqio->next_seq) 
 {
 my $string = $seq->seq;
 my @candidates = ();
 my @prunedcandidates;
-my $genename = "testgene";
-open (my $log, '>', 'runlog.txt');
-print $log "siRNA designer run log".localtime()."\n";
-close $log;
+my $genename = $seq->desc; #correctly returns the gene information (not accession)
+my $geneid = $seq->display_id; #correctly returns the GI
 #The fasta records are now read one at a time and can now be acted on
 
 	#first we need to find siRNA candidate matches and load them into an array
@@ -20,7 +24,7 @@ close $log;
 	if ($string =~ m/(AA.{19,23}TT)/g) 
 		{
 		@candidates = ($string =~ m/(AA.{19,23}TT)/g) ;
-#		print "$_\n" for @candidates;
+#		print "$_\n" for @candidates; #debug line
 		}
 	else {print "no matches found"};
 	
@@ -31,9 +35,9 @@ close $log;
 		if (($_ =~ m/AAAA/g) or ($_ =~ m/TTTT/g) or ($_ =~ m/CCCC/g) or ($_ =~ m/GGGG/g) or ($_ =~ m/N/g)) { }
 		else 
 			{
-#			print "candidate siRNA = $_\n";
+#			print "candidate siRNA = $_\n"; #debug line
 			push @prunedcandidates, $_;
-#			print "$_\n" for @prunedcandidates;
+#			print "$_\n" for @prunedcandidates; #debug line
 			}
 		}
 	#Any candidates which do not meet the selection criteria were removed and now we can focus on these to check for cross hybridisation with blast
@@ -78,21 +82,29 @@ close $log;
                         	}
                 	}
         	my @uniqblasthits= uniq(@blasthits);
-#       	print @uniqblasthits,"\n\n\n";
+#       	print @uniqblasthits,"\n\n\n"; #debug line
 
         	if (scalar @uniqblasthits == 1)
                 	{
-                	print "\n>$genename\_candidate_siRNA_\#$count has no off-target effects\n\n"
-                	}
+                	print $fa "\n$genename\_candidate_siRNA_\#$count has no off-target effects\n\n"
+			}
+		else {print $fa "\n$genename\_candidate_siRNA_\#$count has off-target effects in ".((scalar @uniqblasthits)-1)." genes\n\n"}
 
-#               print @uniqblasthits,"\n\n\n";
+
+		#At this point we finish any analysis on the current gene and log any data before starting on the next
+
+
+#               print @uniqblasthits,"\n\n\n"; #debug line
 		system "cat runlog.txt temp.fa > runlogtemp.txt";
 		system "mv runlogtemp.txt runlog.txt";	
 
 		}	
-#		print scalar @titles, "\n";
+		
+		#Remove any temporary files
+#		print scalar @titles, "\n"; #debug lin
 		system("rm tmp.txt");
-		#array @titles now contains each blast hit for the siRNA candidate, can look for genes now
+		system("rm temp.fa");
+#		system("rm temp.bln");
 }	
 		
 
@@ -106,7 +118,6 @@ sub uniq {
 
 
 #Should add the ability to take a remote fasta sequence as entry (or GI)
-#Next thing to do is to make it write a new fasta containing the candidates, and to record the name of the input mRNA
 #Add the ability to check thermostability, GC content, binding to loop regions of mRNA
 
 
