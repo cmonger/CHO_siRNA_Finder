@@ -3,10 +3,17 @@
 #use strict;
 use Bio::SeqIO;
 
-if (($help == 1) or ($h ==1)) 
+my $filename = shift || 'sample.fa';
+if (-e $filename) {}
+else {print "\n File $filename not found, please check file exists\n"; exit;}
+
+if (($help == 1) or ($h == 1)) 
 	{
-	print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" \n\nOptions: -long (Use all motifs (Default: AA[N19]TT)) -help / -h (This helpful message)\n\n";
-	print "Long mode enables searching for the motifs N2[CG]N8[AT]N8[AT]N2 and NA[N21] (more candidates but takes long)\n\n";
+	print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" \n\nOptions: -long (Use all motifs (Default: AA[N19]TT)) -advanced (enable refined scoring) -multilength  -help / -h (This helpful message)\n\n";
+	print "Long mode enables searching for the motifs N2[CG]N8[AT]N8[AT]N2 and NA[N21] (more candidates but takes long)\n";
+	print "Multilength enables searching for siRNA of length 23-27 (default 23 only)\n";
+	print "Advanced enables additional scoring options\n\n";
+	print "Input file must be a fasta file, can be a single or multi fasta.\n\n";
  	exit;
 	}
 print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" -h or -help for help/arguments\n\n";
@@ -17,7 +24,7 @@ print $log "siRNA designer run log".localtime()."\n";
 close $log;
 
 #Begin to parse the multifasta file using bioperl and act on each record indiviually
-my $seqio = Bio::SeqIO->new(-file => "sample.fa", '-format' => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => "$filename", '-format' => 'Fasta');
 while(my $seq = $seqio->next_seq) 
 {
 my $string = $seq->seq;
@@ -31,8 +38,16 @@ my $geneid = $seq->display_id; #correctly returns the GI
 	print "Finding siRNA candidates for $genename\n\n";
 
 	#first we need to find siRNA candidate matches and load them into an array, remembering the position of the match
-	if ($string !~ m/(AA.{19,23}TT)/g) {print "No candidates found for $genename";}	
-	while ($string =~ m/(AA.{19,23}TT)/g) 
+	if ($multilength == 1) {
+        if ($string !~ m/(AA.{19,23}TT)/g) {print "No candidates found for $genename";}  
+        while ($string =~ m/(AA.{19,23}TT)/g)
+                {
+                push (@candidates, $1) ;
+                $candidateinfo->{$1}->{"start"} = $-[1];
+                $candidateinfo->{$1}->{"end"} = $+[1];
+                } }
+	if ($string !~ m/(AA.{19}TT)/g) {print "No candidates found for $genename";}	 
+	while ($string =~ m/(AA.{19}TT)/g) 
 		{
 		push (@candidates, $1) ;
 		$candidateinfo->{$1}->{"start"} = $-[1];
@@ -211,7 +226,48 @@ my $geneid = $seq->display_id; #correctly returns the GI
                                 $score = $score + 1;
                                 }
 			else {$score = $score - 5};
-
+			
+			#Advanced mode "Rational RNAi Design" http://www.protocol-online.org/prot/Protocols/Rules-of-siRNA-design-for-RNA-interference--RNAi--3210.html
+			if ($advanced== 1)
+				{
+				if ($keys =~ /^.{14}[AT]/)
+					{
+					$score = $score +1;
+					}
+				if ($keys =~ /^.{15}[AT]/)
+					{
+					$score = $score	+1;
+					}
+                                if ($keys =~ /^.{16}[AT]/)
+                                        {
+                                        $score = $score +1;
+                                        }
+                                if ($keys =~ /^.{17}[AT]/)
+                                        {
+                                        $score = $score +1;
+                                        }
+				if ($keys =~ /^.{18}[AT]/)
+					{
+					$score = $score +1;
+					}
+				if ($keys =~ /^.{2}A/)
+					{
+					$score = $score +1;
+					}
+				if ($keys =~ /^.{9}U/)
+					{
+					$score = $score +1;
+					}
+				if ($keys =~ /^.{18}[AT]/)
+					{
+					$score = $score -1;
+					}
+				if ($keys =~ /^.{12}[ACT]/)
+					{
+					$score = $score -1;
+					}
+				}
+	
 			print $fa "$keys has a score of $score\n";
 			
 			#Now the canidates have been scored, they must be sorted based on this number and returned		
