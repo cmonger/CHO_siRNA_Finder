@@ -1,7 +1,15 @@
 #!/usr/bin/perl -s
-use warnings;
+#use warnings;
 #use strict;
 use Bio::SeqIO;
+
+if (($help == 1) or ($h ==1)) 
+	{
+	print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" \n\nOptions: -long (Use all motifs (Default: AA[N19]TT)) -help / -h (This helpful message)\n\n";
+	print "Long mode enables searching for the motifs N2[CG]N8[AT]N8[AT]N2 and NA[N21] (more candidates but takes long)\n\n";
+ 	exit;
+	}
+print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" -h or -help for help/arguments\n\n";
 
 #create log file 
 open (my $log, '>', 'runlog.txt');
@@ -9,7 +17,7 @@ print $log "siRNA designer run log".localtime()."\n";
 close $log;
 
 #Begin to parse the multifasta file using bioperl and act on each record indiviually
-my $seqio = Bio::SeqIO->new(-file => "sample2.fa", '-format' => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => "sample.fa", '-format' => 'Fasta');
 while(my $seq = $seqio->next_seq) 
 {
 my $string = $seq->seq;
@@ -19,6 +27,8 @@ my @prunedcandidates;
 my $genename = $seq->desc; #correctly returns the gene information (not accession)
 my $geneid = $seq->display_id; #correctly returns the GI
 #The fasta records are now read one at a time and can now be acted on
+	
+	print "Finding siRNA candidates for $genename\n\n";
 
 	#first we need to find siRNA candidate matches and load them into an array, remembering the position of the match
 	if ($string !~ m/(AA.{19,23}TT)/g) {print "No candidates found for $genename";}	
@@ -28,6 +38,20 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		$candidateinfo->{$1}->{"start"} = $-[1];
 		$candidateinfo->{$1}->{"end"} = $+[1];	
 		}
+	if ($long == 1) {
+	while ($string =~ m/(..[CG].{8}[AT].{8}[AUT]..)/g)
+                {
+                push (@candidates, $1) ;
+                $candidateinfo->{$1}->{"start"} = $-[1];
+                $candidateinfo->{$1}->{"end"} = $+[1];
+                }
+        while ($string =~ m/(.A.{21})/g)
+                { 
+                push (@candidates, $1) ;
+                $candidateinfo->{$1}->{"start"} = $-[1];
+                $candidateinfo->{$1}->{"end"} = $+[1];
+                }}
+
 	
 	#At this point we have identified any matching candidates, which now need to be pruned for stretches of 4 identical nucleotides or N bases.
 
