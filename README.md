@@ -1,6 +1,8 @@
 # SYFY - A CHO siRNA design tool
 SYFY, or si finder, is a tool for the optimal design of candidate siRNAs for the Chinese Hamster.
+
 This tool uses information on the optimal design of siRNAs from a variety of resources including
+
 siRNA rational design guidelines (http://www.protocol-online.org/prot/Protocols/Rules-of-siRNA-design-for-RNA-interference--RNAi--3210.html)
 and thermodynamics calculations (Khvorova et al. 2003 - doi:10.1016/S0092-8674(03)00801-8) 
 in combination with a Blast search to identify potential off-target effects.
