@@ -21,7 +21,7 @@ my $geneid = $seq->display_id; #correctly returns the GI
 #The fasta records are now read one at a time and can now be acted on
 
 	#first we need to find siRNA candidate matches and load them into an array, remembering the position of the match
-	
+	if ($string !~ m/(AA.{19,23}TT)/g) {print "No candidates found for $genename";}	
 	while ($string =~ m/(AA.{19,23}TT)/g) 
 		{
 		push (@candidates, $1) ;
@@ -49,8 +49,11 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		open(my $fa, '>', 'temp.fa');
 		$count++;
 		print $fa "\n>$genename\_candidate_siRNA_\#$count\n$_";
+
 		system "blastn -db cho_mrna -word_size 16 -evalue 1000 -query temp.fa > temp.bln";
 		my $candidatesequence = $_;
+		print $fa "\nCandidate match at position ".$candidateinfo->{$candidatesequence}->{"start"}." to ".$candidateinfo->{$candidatesequence}->{"end"};
+		
 
 		#Parse the blast output and retain any useful information	
 		#lazy use of system grep
@@ -111,7 +114,15 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		foreach my $keys (keys %$candidatesequence)
 			{
 #			print $candidatesequence->{$keys}->{"gc"}."\n"; #example syntax line
+#			print $candidateinfo->{$keys}->{"start"}."\n"; #as the 2 candidate data structures share key hashes, the start and end position can be returned from the original one
 			$candidatesequence->{$keys}->{"offtargets"}= ((scalar @uniqblasthits)-1);
+			
+			#Calculate the thermodynamic values, we want a high negative value
+			my $sense = $keys;
+			my $antisense = reverse_complement($keys);
+			$candidatesequence->{$keys}->{"stability"}= thermodynamic_stability($sense,$antisense);
+			
+			
 			}
 
 		#At this point we finish any analysis on the current gene and log any data before starting on the next
@@ -125,7 +136,7 @@ my $geneid = $seq->display_id; #correctly returns the GI
 #		print scalar @titles, "\n"; #debug line
 		system("rm tmp.txt");
 		system("rm temp.fa");
-#		system("rm temp.bln");
+		system("rm temp.bln");
 }	
 		
 
@@ -137,10 +148,67 @@ sub uniq {
     grep !$seen{$_}++, @_;
 }
 
+sub reverse_complement {
+        my $dna = shift;
+
+	# reverse the DNA sequence
+        my $revcomp = reverse($dna);
+
+	# complement the reversed DNA sequence
+        $revcomp =~ tr/ACGTacgt/TGCAtgca/;
+        return $revcomp;
+}
+
+sub thermodynamic_stability {
+#Usage: thermodynamic_stability(sense,antisense);
+#Returns the thermodynamic difference of the 5' end of the sense and antisene sirna transcript in -kcal/mol
+#A more stable 5' sense transcript is desirable (A more negative return from this subfunct)
+        my $s = shift;
+        my $as = shift;
+        my $energy;
+        $energy->{"AA"} = 1.1;
+        $energy->{"AC"} = 2.4;
+        $energy->{"AG"} = 1.9;
+        $energy->{"AT"} = 1.1;
+        $energy->{"CA"} = 2.2;
+        $energy->{"CC"} = 3.3;
+        $energy->{"CG"} = 2.2;
+        $energy->{"CT"} = 1.9;
+        $energy->{"GA"} = 2.7;
+        $energy->{"GC"} = 3.8;
+        $energy->{"GG"} = 3.3;
+        $energy->{"GT"} = 2.4;
+        $energy->{"TA"} = 1.4;
+        $energy->{"TC"} = 2.6;
+        $energy->{"TG"} = 2.2;
+        $energy->{"TT"} = 1.1;
+
+        if ($s =~ m/(.{6})/) {$s = $1};
+        if ($as =~ m/(.{6})/) {$as = $1};
+
+        my $scount = 0;
+        my $ascount = 0;
+
+        for ($i = 0; $i < length($s); $i++) {
+                if ($i != length($s)-1) {
+                        my $nucpair= substr($s,$i,2);
+                        $scount = $scount - $energy->{$nucpair};
+                }
+        }
+
+
+        for ($i = 0; $i < length($as); $i++) {
+                if ($i != length($as)-1) {
+                        my $nucpair= substr($as,$i,2);
+                        $ascount = $ascount - $energy->{$nucpair};
+                 }
+        }
+        return $scount - $ascount;
+
+}
 
 #Should add the ability to take a remote fasta sequence as entry (or GI)
-#Add the ability to check thermostability, GC content, binding to loop regions of mRNA
+#Add the ability to check binding to loop regions of mRNA
 
-
-#Ensure that only the coding region is searched (Look for an ORF)
+#Use length($string)-100 to check that match postion falls between 100 bases of the start and end of the mRNA
 #Score candidates using rational rnai guidelines http://www.protocol-online.org/prot/Protocols/Rules-of-siRNA-design-for-RNA-interference--RNAi--3210.html
