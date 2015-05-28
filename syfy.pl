@@ -9,7 +9,7 @@ print $log "siRNA designer run log".localtime()."\n";
 close $log;
 
 #Begin to parse the multifasta file using bioperl and act on each record indiviually
-my $seqio = Bio::SeqIO->new(-file => "sample.fa", '-format' => 'Fasta');
+my $seqio = Bio::SeqIO->new(-file => "sample2.fa", '-format' => 'Fasta');
 while(my $seq = $seqio->next_seq) 
 {
 my $string = $seq->seq;
@@ -222,16 +222,17 @@ my $geneid = $seq->display_id; #correctly returns the GI
 			push (@finalkeyscore, $tscore) ;	
 			}
 
-		#returning the top 3 hits	
+		#returning the top 3 hits
+		print "\n$genename\n";	
 		foreach my $i (0..2)
 			{
-			print "$finalkeyname[$i]\t$finalkeyscore[$i]";				
+			if (exists $finalkeyname[$i]) {print "$finalkeyname[$i]\t$finalkeyscore[$i]"};				
 			}			 
 
 		
 		#Remove any temporary files
 #		print scalar @titles, "\n"; #debug line
-		system("rm tmp.txt");
+		system("rm tmp*");
 		system("rm temp.fa");
 		system("rm temp.bln");
 }	
