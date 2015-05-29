@@ -14,6 +14,15 @@ Output filename generated if not specified
 -advanced	Incorporate additional scoring options<br>
 -multilength	Find siRNAs of length 23-27 (Default = 23)<br>
 
+##Fasta File Preparation
+Input files can be generated using NCBI Batch Entrez to retrieve a fasta file from gene ids.<br>
+In order to convert between protein and mRNA gene ids, the script 'prot_ids_2_mRNA.pl' is included.<br>
+Usage: ./prot_ids_2_mRNA.pl [inputids.txt] [outputids.txt]<br>
+
+##Dependancies
+Will work on Unix systems with an installation of Perl and Blast. A local blast database called cho_mrna, containing all transcript sequences is required. SYSY can be configured to work with any organism by changing the contents of this blast database, or directing the software to another blast database by editing the -db tag in line 105 of the script.<br>
+An installation of Lynx is required for the prot_ids_2_mRNA.pl tool.
+
 ##Disclaimer
 siRNA predictions made with this tool are PREDICTIONS and not guaranteed to work. <br>
 Author claims no responsibility for unsucessful gene knockdowns.
