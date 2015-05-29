@@ -7,9 +7,16 @@ my $filename = shift || 'sample.fa';
 if (-e $filename) {}
 else {print "\n File $filename not found, please check file exists\n"; exit;}
 
+my $outfilename = shift || $filename.'_syfyresults.txt';
+open ($syfyout, '>', $outfilename);
+
+
+if (defined $hits) {$hits = $hits - 1}
+else {$hits = 2;}
+
 if (($help == 1) or ($h == 1)) 
 	{
-	print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" \n\nOptions: -long (Use all motifs (Default: AA[N19]TT)) -advanced (enable refined scoring) -multilength  -help / -h (This helpful message)\n\n";
+	print "\nCHO siRNA finder\n\nUsage: \"./syfy.pl <arguments> <inputfile>\" \n\nOptions: -hits=<number> (return X results (Default: 3)) -long (Use all motifs (Default: AA[N19]TT)) -advanced (enable refined scoring) -multilength  -help / -h (This helpful message)\n\n";
 	print "Long mode enables searching for the motifs N2[CG]N8[AT]N8[AT]N2 and NA[N21] (more candidates but takes long)\n";
 	print "Multilength enables searching for siRNA of length 23-27 (default 23 only)\n";
 	print "Advanced enables additional scoring options\n\n";
@@ -31,6 +38,7 @@ my $string = $seq->seq;
 my @candidates = ();
 my $candidateinfo;
 my @prunedcandidates;
+my $candidatesequence;
 my $genename = $seq->desc; #correctly returns the gene information (not accession)
 my $geneid = $seq->display_id; #correctly returns the GI
 #The fasta records are now read one at a time and can now be acted on
@@ -93,7 +101,7 @@ my $geneid = $seq->display_id; #correctly returns the GI
 		print $fa "\n>$genename\_candidate_siRNA_\#$count\n$_";
 
 		system "blastn -db cho_mrna -word_size 16 -evalue 1000 -query temp.fa > temp.bln";
-		my $candidatesequence = $_;
+		$candidatesequence = $_;
 		print $fa "\nCandidate match at position ".$candidateinfo->{$candidatesequence}->{"start"}." to ".$candidateinfo->{$candidatesequence}->{"end"};
 		
 
@@ -303,18 +311,27 @@ my $geneid = $seq->display_id; #correctly returns the GI
 			}
 
 		#returning the top 3 hits
-		print "\n$genename\n";	
-		foreach my $i (0..2)
+		print $syfyout "\n$genename\n";	
+		if (exists $finalkeyscore[0])
 			{
-			if (exists $finalkeyname[$i]) {print "$finalkeyname[$i]\t$finalkeyscore[$i]"};				
-			}			 
+			print $syfyout "sequence\tscore\tstart\tend\n";	
+			foreach my $i (0..$hits)
+				{
+				chomp $finalkeyscore[$i];
+				if (exists $finalkeyname[$i]) 
+					{
+					print $syfyout "$finalkeyname[$i]\t$finalkeyscore[$i]\t".$candidateinfo->{$finalkeyname[$i]}->{"start"}."\t".$candidateinfo->{$finalkeyname[$i]}->{"end"}."\n";
+					}				
+				}
+			}
+		else {print "No candidate siRNAs found for $genename, try long or multi mode.\n\n";}			 
 
 		
 		#Remove any temporary files
 #		print scalar @titles, "\n"; #debug line
 		system("rm tmp*");
-		system("rm temp.fa");
-		system("rm temp.bln");
+		if (-e "temp.fa"){system("rm temp.fa")};
+		if (-e "temp.bln"){system("rm temp.bln")};
 }	
 		
 
@@ -384,8 +401,3 @@ sub thermodynamic_stability {
         return $scount - $ascount;
 
 }
-
-#Should add the ability to take a remote fasta sequence as entry (or GI)
-#Add the ability to check binding to loop regions of mRNA
-
-#Score candidates using rational rnai guidelines http://www.protocol-online.org/prot/Protocols/Rules-of-siRNA-design-for-RNA-interference--RNAi--3210.html

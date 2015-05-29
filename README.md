@@ -8,10 +8,11 @@ Input file must be in the form of a fasta file (multifasta support included)
 
 ##Options
 -h/-help	Display help information<br>
+-hits=N		Return N number of siRNA candidates for each mRNA (Default = 3) 
 -long		Perform a longer search to include sequence motifs N2[CG]N8[AUT]N8[AUT]N2 and NAN21<br>
 -advanced	Incorporate additional scoring options<br>
--multilength	Find siRNAs of length 23-27 (default 23)<br>
+-multilength	Find siRNAs of length 23-27 (Default = 23)<br>
 
 ##Disclaimer
-siRNA predictions made with this tool are PREDICTIONS and not guarunteed to work. <br>
+siRNA predictions made with this tool are PREDICTIONS and not guaranteed to work. <br>
 Author claims no responsibility for unsucessful gene knockdowns.
