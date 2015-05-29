@@ -26,3 +26,7 @@ An installation of Lynx is required for the prot_ids_2_mRNA.pl tool.
 ##Disclaimer
 siRNA predictions made with this tool are PREDICTIONS and not guaranteed to work. <br>
 Author claims no responsibility for unsucessful gene knockdowns.
+
+##Author Information
+Written by Craig Monger of Dublin City University and the National Institute for Bioprocessing Research and Training. <br>
+Contact information: craig.monger@nibrt.ie
